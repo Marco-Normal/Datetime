@@ -1,3 +1,7 @@
+use std::str::FromStr;
+use thiserror::Error;
+use miette::Diagnostic;
+
 #[derive(Debug)]
 struct Datetime {
     Ano: usize,
@@ -7,6 +11,29 @@ struct Datetime {
     Minuto: usize,
     Segundo: usize,
     Milissegundo: usize,
+}
+
+enum Token {
+    FullYear,
+    HalfYear,
+    FullMonth,
+    WrittenMonth,
+    FullDay,
+    Hour,
+    Minute,
+    Second,
+}
+
+
+#[derive(Error, Diagnostic, Debug)]
+enum DateTimeError;
+
+impl FromStr for Token {
+    type Err;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        todo!()
+    }
 }
 
 impl Datetime {

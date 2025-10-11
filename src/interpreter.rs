@@ -1,13 +1,13 @@
-use super::Datetime;
+use crate::datetime::Datetime;
 use crate::lexer::{DateTimeLexer, Token};
 use miette::{Diagnostic, Error, IntoDiagnostic};
 use thiserror::Error;
 
 #[derive(Default)]
-pub struct Interpreter;
+pub(crate) struct Interpreter;
 
 #[derive(Debug, Error, Diagnostic)]
-enum InterpreterError {
+pub enum InterpreterError {
     #[error("Unexpect sequence. Expected `{}`, got `{}`", expected, unexpected)]
     WrongSequence {
         expected: String,
@@ -24,8 +24,11 @@ fn parse_digits(mut input: &mut str, width: usize) -> Result<(usize, &mut str), 
     Ok((number, input))
 }
 impl Interpreter {
-    pub fn parse_datetime(input: &mut str, expected_format: String) -> Result<Datetime, Error> {
-        let lexer = DateTimeLexer::new(&expected_format);
+    pub(crate) fn parse_datetime(
+        input: &mut str,
+        expected_format: &str,
+    ) -> Result<Datetime, Error> {
+        let lexer = DateTimeLexer::new(expected_format);
         let mut input = input;
         let mut datetime = Datetime::default();
         for token in lexer {
@@ -71,7 +74,7 @@ mod tests {
     #[test]
     fn basic_str_to_datetime() -> TestResult {
         let mut input = String::from("04-02-2003");
-        let result = Interpreter::parse_datetime(&mut input, String::from("%d-%m-%Y"))?;
+        let result = Interpreter::parse_datetime(&mut input, "%d-%m-%Y")?;
         assert_eq!(
             result,
             Datetime {
@@ -86,7 +89,7 @@ mod tests {
     #[test]
     fn expected_err() -> TestResult {
         let mut input = String::from("04-02?2003");
-        let result = Interpreter::parse_datetime(&mut input, String::from("%d-%m-%Y"));
+        let result = Interpreter::parse_datetime(&mut input, "%d-%m-%Y");
         assert!(result.is_err());
         Ok(())
     }

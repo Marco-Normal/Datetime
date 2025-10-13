@@ -30,7 +30,6 @@ impl fmt::Display for Token {
             Self::Second => write!(f, "Second"),
             Self::Literal { pattern: _ } => write!(f, "Literal"),
             Self::AmOrPm => write!(f, "Am or Pm"),
-            token => todo!("{token} no yet implemented"),
         }
     }
 }
@@ -127,8 +126,6 @@ pub enum LexerError {
         #[label("This input character")]
         at: SourceSpan,
     },
-    #[error("Missing `%` from pattern definition")]
-    MissingPercent,
     #[error("Invalid Whitespace")]
     InvalidWhitespace {
         #[label("This format here")]
@@ -142,7 +139,6 @@ pub enum LexerError {
 
 #[cfg(test)]
 mod tests {
-    
 
     use super::*;
 
@@ -153,7 +149,7 @@ mod tests {
         let input = "%Y";
         let mut parser = DateTimeLexer::new(input);
         assert_eq!(
-            parser.next().ok_or(LexerError::MissingPercent)??,
+            parser.next().ok_or(LexerError::UnexpectedEOF)??,
             Token::FullYear
         );
         assert!(parser.next().is_none()); // Ensure end of input
@@ -165,17 +161,14 @@ mod tests {
         let input = "%Y%m%d";
         let mut parser = DateTimeLexer::new(input);
         assert_eq!(
-            parser.next().ok_or(LexerError::MissingPercent)??,
+            parser.next().ok_or(LexerError::UnexpectedEOF)??,
             Token::FullYear
         );
         assert_eq!(
-            parser.next().ok_or(LexerError::MissingPercent)??,
+            parser.next().ok_or(LexerError::UnexpectedEOF)??,
             Token::FullMonth
         );
-        assert_eq!(
-            parser.next().ok_or(LexerError::MissingPercent)??,
-            Token::Day
-        );
+        assert_eq!(parser.next().ok_or(LexerError::UnexpectedEOF)??, Token::Day);
         assert!(parser.next().is_none());
         Ok(())
     }
@@ -205,7 +198,7 @@ mod tests {
         ];
 
         for (input, expected_tokens) in test_cases {
-            let mut parser = DateTimeLexer::new(input);
+            let parser = DateTimeLexer::new(input);
             let mut actual_tokens = Vec::new();
             for token in parser {
                 actual_tokens.push(token?);
@@ -219,14 +212,14 @@ mod tests {
     fn test_error_conditions() -> TestResult {
         let input = "%Z"; // Invalid format specifier
         let mut lexer = DateTimeLexer::new(input);
-        let result = lexer.next().ok_or(LexerError::MissingPercent)?;
+        let result = lexer.next().ok_or(LexerError::UnexpectedEOF)?;
         // Should return an error for invalid format
         assert!(result.is_err());
 
         // Test for invalid whitespace
         let input = "% ";
         let mut lexer = DateTimeLexer::new(input);
-        let result = lexer.next().ok_or(LexerError::MissingPercent)?;
+        let result = lexer.next().ok_or(LexerError::UnexpectedEOF)?;
         assert!(matches!(result, Err(LexerError::InvalidWhitespace { .. })));
 
         Ok(())
@@ -272,7 +265,7 @@ mod tests {
     fn test_consecutive_literals_merged() -> TestResult {
         let input = "hello world";
         let mut lexer = DateTimeLexer::new(input);
-        let token = lexer.next().ok_or(LexerError::MissingPercent)??;
+        let token = lexer.next().ok_or(LexerError::UnexpectedEOF)??;
 
         // Should merge all literals into a single token
         assert_eq!(

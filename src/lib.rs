@@ -1,3 +1,3 @@
 pub mod datetime;
-pub mod interpreter;
-pub mod lexer;
+pub(crate) mod interpreter;
+pub(crate) mod lexer;

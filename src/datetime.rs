@@ -3,7 +3,7 @@ use miette::{Diagnostic, Error};
 use thiserror::Error;
 
 use crate::{interpreter::Interpreter, lexer::Token};
-
+/// A datetime Structure that contains only the most important parts
 #[derive(Debug, PartialEq, Eq)]
 pub struct Datetime {
     pub year: usize,
@@ -15,6 +15,7 @@ pub struct Datetime {
     pub(crate) twelve_hour_format: bool,
 }
 
+/// A datetime builder that contains only the most important parts
 pub struct DatetimeBuilder {
     year: usize,
     month: usize,
@@ -172,7 +173,7 @@ impl Datetime {
     pub fn from_str(date: &str, date_format: &str) -> Result<Self, Error> {
         Interpreter::parse_datetime(date, date_format)
     }
-    pub fn try_guess(date: String) -> Option<Self> {
+    pub fn try_guess(date: &str) -> Option<Self> {
         const COMMON_FORMATS: &[&str] = &[
             "%Y/%m/%d",
             "%Y-%m-%d",
@@ -192,7 +193,7 @@ impl Datetime {
         ];
         for format in COMMON_FORMATS {
             info!("Trying to parse `{date}` as format `{format}`");
-            match Interpreter::parse_datetime(&date, format) {
+            match Interpreter::parse_datetime(date, format) {
                 Ok(date) => return Some(date),
                 Err(e) => warn!("Format `{format}` did not match `{date}`. Reason: {e}"),
             }
@@ -245,7 +246,7 @@ mod tests {
     // Add this when you implement the try_guess feature
     #[test]
     fn test_try_guess() {
-        let date = String::from("2023-10-15");
+        let date = "2023-10-15";
         let result = Datetime::try_guess(date);
         assert!(result.is_some());
         if let Some(dt) = result {
@@ -254,11 +255,11 @@ mod tests {
             assert_eq!(dt.day, 15);
         }
 
-        let date = String::from("15/10/2023");
+        let date = "15/10/2023";
         let result = Datetime::try_guess(date);
         assert!(result.is_some());
 
-        let date = String::from("not a date");
+        let date = "not a date";
         let result = Datetime::try_guess(date);
         assert!(result.is_none());
     }

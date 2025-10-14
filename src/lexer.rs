@@ -57,7 +57,6 @@ impl Iterator for DateTimeLexer<'_> {
     fn next(&mut self) -> Option<Self::Item> {
         let mut chars = self.rest.chars();
         let next = chars.next()?;
-        dbg!(self.rest);
         self.byte += next.len_utf8();
         enum Started {
             Percent,
@@ -203,7 +202,6 @@ mod tests {
             for token in parser {
                 actual_tokens.push(token?);
             }
-            dbg!(&actual_tokens);
             assert_eq!(actual_tokens, expected_tokens, "Failed on input: {}", input);
         }
         Ok(())
@@ -236,7 +234,6 @@ mod tests {
         }
 
         // Should have pattern literals intermixed with format tokens
-        dbg!(&tokens);
         assert_eq!(tokens.len(), 12);
         assert!(matches!(tokens[0], Token::Literal { .. }));
         assert!(matches!(tokens[3], Token::FullMonth));

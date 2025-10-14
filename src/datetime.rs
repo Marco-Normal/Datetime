@@ -48,7 +48,7 @@ impl Default for Datetime {
             year: 1900,
             month: 1,
             day: 1,
-            hour: 24,
+            hour: 0,
             minute: 00,
             second: 00,
             twelve_hour_format: false,
@@ -62,7 +62,7 @@ impl Default for DatetimeBuilder {
             year: 1900,
             month: 1,
             day: 1,
-            hour: 24,
+            hour: 0,
             minute: 00,
             second: 00,
             twelve_hour_format: false,
@@ -78,76 +78,21 @@ impl DatetimeBuilder {
         Self { year, ..self }
     }
     pub fn month(self, month: usize) -> Self {
-        if month > 12 {
-            panic!(
-                "{}",
-                DatetimeError::InvalidValue {
-                    expected: "1-12".to_string(),
-                    field: Token::FullMonth,
-                    got: month.to_string(),
-                    src: None,
-                }
-            );
-        }
         Self { month, ..self }
     }
     pub fn day(self, day: usize) -> Self {
-        if day > 30 {
-            panic!(
-                "{}",
-                DatetimeError::InvalidValue {
-                    expected: "1-30".to_string(),
-                    field: Token::Day,
-                    got: day.to_string(),
-                    src: None,
-                }
-            );
-        }
         Self { day, ..self }
     }
 
     pub fn hour(self, hour: usize) -> Self {
-        if hour > 24 {
-            panic!(
-                "{}",
-                DatetimeError::InvalidValue {
-                    expected: "0-24".to_string(),
-                    field: Token::Hour,
-                    got: hour.to_string(),
-                    src: None,
-                }
-            );
-        }
         Self { hour, ..self }
     }
 
     pub fn minute(self, minute: usize) -> Self {
-        if minute > 60 {
-            panic!(
-                "{}",
-                DatetimeError::InvalidValue {
-                    expected: "0-60".to_string(),
-                    field: Token::Day,
-                    got: minute.to_string(),
-                    src: None,
-                }
-            );
-        }
         Self { minute, ..self }
     }
 
     pub fn second(self, second: usize) -> Self {
-        if second > 60 {
-            panic!(
-                "{}",
-                DatetimeError::InvalidValue {
-                    expected: "0-60".to_string(),
-                    field: Token::Second,
-                    got: second.to_string(),
-                    src: None,
-                }
-            );
-        }
         Self { second, ..self }
     }
     pub fn change_format(self, twelve_hour_format: bool) -> Self {
@@ -156,8 +101,67 @@ impl DatetimeBuilder {
             ..self
         }
     }
-    pub fn build(self) -> Datetime {
-        Datetime {
+    pub fn build(self) -> Result<Datetime, Error> {
+        let max_days = match days_in_month(self.year, self.month) {
+            Some(days) => days,
+            None => {
+                return Err(DatetimeError::InvalidValue {
+                    expected: "A month between 1-12".to_string(),
+                    field: Token::FullMonth, // Or another appropriate token
+                    got: self.month.to_string(),
+                    src: None,
+                }
+                .into());
+            }
+        };
+        if self.month > 12 {
+            return Err(DatetimeError::InvalidValue {
+                expected: "1-12".to_string(),
+                field: Token::FullMonth,
+                got: self.month.to_string(),
+                src: None,
+            }
+            .into());
+        }
+
+        if self.day == 0 || self.day > max_days {
+            return Err(DatetimeError::InvalidValue {
+                expected: format!("A day between 1-{}", max_days),
+                field: Token::Day,
+                got: self.day.to_string(),
+                src: None,
+            }
+            .into());
+        }
+        if self.hour > 23 {
+            return Err(DatetimeError::InvalidValue {
+                expected: "0-23".to_string(),
+                field: Token::Hour,
+                got: self.hour.to_string(),
+                src: None,
+            }
+            .into());
+        }
+
+        if self.minute > 59 {
+            return Err(DatetimeError::InvalidValue {
+                expected: "0-60".to_string(),
+                field: Token::Day,
+                got: self.minute.to_string(),
+                src: None,
+            }
+            .into());
+        }
+        if self.second > 59 {
+            return Err(DatetimeError::InvalidValue {
+                expected: "0-60".to_string(),
+                field: Token::Second,
+                got: self.second.to_string(),
+                src: None,
+            }
+            .into());
+        }
+        Ok(Datetime {
             year: self.year,
             month: self.month,
             day: self.day,
@@ -165,7 +169,18 @@ impl DatetimeBuilder {
             minute: self.minute,
             second: self.second,
             twelve_hour_format: self.twelve_hour_format,
-        }
+        })
+    }
+}
+fn is_leap_year(year: usize) -> bool {
+    (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
+}
+fn days_in_month(year: usize, month: usize) -> Option<usize> {
+    match month {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => Some(31), // Months with 31 days
+        4 | 6 | 9 | 11 => Some(30),              // Months with 30 days
+        2 => Some(if is_leap_year(year) { 29 } else { 28 }), // February
+        _ => None,                               // Invalid month
     }
 }
 
@@ -229,13 +244,12 @@ mod tests {
         assert_eq!(date.year, 1900);
         assert_eq!(date.month, 1);
         assert_eq!(date.day, 1);
-        assert_eq!(date.hour, 24);
+        assert_eq!(date.hour, 0);
         assert_eq!(date.minute, 0);
         assert_eq!(date.second, 0);
     }
 
     #[test]
-    #[should_panic]
     fn test_invalid_formats() {
         let result = Datetime::from_str("2023-13-32", "%Y-%m-%d");
         assert!(result.is_err()); // Invalid month and day

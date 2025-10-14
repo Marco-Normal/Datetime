@@ -14,11 +14,26 @@ pub(crate) enum InterpreterError {
         #[source_code]
         src: String,
     },
+    #[error(
+        "Input sequence too short for token. Expected at least `{}` tokens but got `{}`",
+        expected,
+        unexpected
+    )]
+    InputTooShort {
+        expected: usize,
+        unexpected: usize,
+        #[source_code]
+        src: String,
+    },
 }
 fn parse_digits(input: &str, width: usize) -> Result<(usize, &str), miette::Report> {
     if input.len() < width {
-        // TODO: Make an interpreter error for this
-        return Err(miette::miette!("Input too short to parse digits"));
+        return Err(InterpreterError::InputTooShort {
+            expected: width,
+            unexpected: input.len(),
+            src: input.to_string(),
+        }
+        .into());
     }
     let (part, rest) = input.split_at(width);
     let number = part.parse::<usize>().into_diagnostic()?;
@@ -71,12 +86,17 @@ impl Interpreter {
                 }
                 Token::AmOrPm => {
                     datetime = datetime.change_format(true);
+                    let hour = datetime.hour;
                     if input.starts_with("PM") {
                         input = &input[2..];
-                        let hour = datetime.hour;
-                        datetime = datetime.hour(hour + 12);
+                        if hour < 12 {
+                            datetime = datetime.hour(hour + 12);
+                        }
                     } else if input.starts_with("AM") {
                         input = &input[2..];
+                        if hour == 12 {
+                            datetime = datetime.hour(0);
+                        }
                     } else {
                         return Err(InterpreterError::WrongSequence {
                             expected: "AM or PM".to_string(),
@@ -113,7 +133,7 @@ impl Interpreter {
                 }
             }
         }
-        Ok(datetime.build())
+        datetime.build()
     }
 }
 

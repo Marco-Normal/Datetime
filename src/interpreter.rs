@@ -63,15 +63,6 @@ impl Interpreter {
                 Token::FullMonth => {
                     let mes: usize;
                     (mes, input) = parse_digits(input, 2)?;
-                    if mes > 12 {
-                        return Err(DatetimeError::InvalidValue {
-                            expected: "1-12".to_string(),
-                            field: Token::FullMonth,
-                            got: mes.to_string(),
-                            src: Some(input.to_string()),
-                        }
-                        .into());
-                    }
                     datetime = datetime.month(mes);
                 }
                 Token::Day => {
@@ -85,7 +76,6 @@ impl Interpreter {
                     datetime = datetime.hour(hour);
                 }
                 Token::AmOrPm => {
-                    datetime = datetime.change_format(true);
                     let hour = datetime.hour;
                     if input.starts_with("PM") {
                         input = &input[2..];
@@ -182,7 +172,6 @@ mod tests {
                 hour: 14,
                 minute: 30,
                 second: 25,
-                twelve_hour_format: false,
             }
         );
 
@@ -195,7 +184,6 @@ mod tests {
                 hour: 15, // 3 PM = 15 in 24-hour format
                 minute: 45,
                 second: 20,
-                twelve_hour_format: true,
                 ..Default::default()
             }
         );

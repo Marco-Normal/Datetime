@@ -1,9 +1,15 @@
+use core::fmt;
+
 use log::{info, warn};
 use miette::{Diagnostic, Error};
 use thiserror::Error;
 
 use crate::{interpreter::Interpreter, lexer::Token};
 /// A datetime Structure that contains only the most important parts
+/// Every Field is public to mimic how datetime in python works.
+/// But, if you decide to build directly, there will be no guarantees
+/// that the date will be valid. So, it's recommended that you use the
+/// proper builder
 #[derive(Debug, PartialEq, Eq)]
 pub struct Datetime {
     pub year: usize,
@@ -12,10 +18,22 @@ pub struct Datetime {
     pub hour: usize,
     pub minute: usize,
     pub second: usize,
-    pub(crate) twelve_hour_format: bool,
 }
 
-/// A datetime builder that contains only the most important parts
+/// A datetime builder that contains only the most important parts.
+/// When calling `.build()`, it performs all the necessary checks
+/// to ensure that the date is correct. If, for some reason, some
+/// field is with a wrong value, it'll throw an error.
+/// # Examples
+/// ```
+/// use doc::DatetimeBuilder
+/// let new_date = DatetimeBuilder::new()
+///     .year(2024)
+///     .month(2)
+///     .day(4);
+/// let date: Result<Datetime, _> = new_date.build();
+/// assert!(date.is_ok());
+/// ```
 pub struct DatetimeBuilder {
     year: usize,
     month: usize,
@@ -23,7 +41,6 @@ pub struct DatetimeBuilder {
     pub(crate) hour: usize,
     minute: usize,
     second: usize,
-    pub(crate) twelve_hour_format: bool,
 }
 #[derive(Debug, Error, Diagnostic)]
 pub(crate) enum DatetimeError {
@@ -51,8 +68,17 @@ impl Default for Datetime {
             hour: 0,
             minute: 00,
             second: 00,
-            twelve_hour_format: false,
         }
+    }
+}
+
+impl fmt::Display for Datetime {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}/{}/{} {}:{}:{}",
+            self.year, self.month, self.day, self.hour, self.minute, self.second
+        )
     }
 }
 
@@ -65,7 +91,6 @@ impl Default for DatetimeBuilder {
             hour: 0,
             minute: 00,
             second: 00,
-            twelve_hour_format: false,
         }
     }
 }
@@ -95,12 +120,7 @@ impl DatetimeBuilder {
     pub fn second(self, second: usize) -> Self {
         Self { second, ..self }
     }
-    pub fn change_format(self, twelve_hour_format: bool) -> Self {
-        Self {
-            twelve_hour_format,
-            ..self
-        }
-    }
+    /// Returns an error if some field for the date is invalid, e.g.: month(14)
     pub fn build(self) -> Result<Datetime, Error> {
         let max_days = match days_in_month(self.year, self.month) {
             Some(days) => days,
@@ -168,7 +188,6 @@ impl DatetimeBuilder {
             hour: self.hour,
             minute: self.minute,
             second: self.second,
-            twelve_hour_format: self.twelve_hour_format,
         })
     }
 }

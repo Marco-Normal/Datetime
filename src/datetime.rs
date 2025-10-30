@@ -10,7 +10,7 @@ use crate::{interpreter::Interpreter, lexer::Token};
 /// But, if you decide to build directly, there will be no guarantees
 /// that the date will be valid. So, it's recommended that you use the
 /// proper builder
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, PartialOrd)]
 pub struct Datetime {
     pub year: usize,
     pub month: usize,
@@ -76,8 +76,8 @@ impl fmt::Display for Datetime {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{}/{}/{} {}:{}:{}",
-            self.year, self.month, self.day, self.hour, self.minute, self.second
+            "{:02}/{:02}/{:02} {:02}:{:02}:{:02}",
+            self.day, self.month, self.year, self.hour, self.minute, self.second
         )
     }
 }
